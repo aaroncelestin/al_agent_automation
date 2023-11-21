@@ -316,11 +316,11 @@ cid="$1"
 # Name of the new deployment
 deployment_name="$2"
 # Azure Subscription ID
-subscription_id="$5"
+subscription_id="$3"
 # Active Directory ID
-active_directory_id="$6"
+active_directory_id="$4"
 # Azure CLient ID or Azure Role ID
-ad_client_id="$4"
+ad_client_id="$5"
 # Azure Client Secret or Role Secret
 client_secret="$6"
 
