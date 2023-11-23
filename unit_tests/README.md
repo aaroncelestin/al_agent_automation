@@ -4,7 +4,7 @@
 
 Writing tests for Bash can be challenging, since there is no built-in object support, there are only two type definitions (int and string), and thus no built-in hierachy definitions. That isn't a knock on bash or shell scripts, since these are Operating Systems and not a programming languages. Nevertheless, I'm including this handy tutorial in the README section of the unit-test folders in all of my projects going forward so it will always be on-hand when I need it.
 
-The BATS GithUb repo can be found [ehre](https://github.com/sstephenson/bats).
+The BATS GithUb repo can be found [here](https://github.com/sstephenson/bats).
 
 ### Setting up a test environment
 Bats is the core testing library, Bats-Assert adds lots of extra asserts for more readable tests, and Bats-Support adds some better output formatting (and is a prerequisite for Bats-Assert).
