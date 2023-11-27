@@ -2,7 +2,7 @@
 
 *This breakdown was written by Tim Perry and you can find this tutorial in his Medium [article here](https://medium.com/@pimterry/testing-your-shell-scripts-with-bats-abfca9bdc5b9).*
 
-Writing tests for Bash can be challenging, since there is no built-in object support, there are only two type definitions (int and string), and thus no built-in hierachy definitions. That isn't a knock on bash or shell scripts, since these are Operating Systems and not a programming languages. Nevertheless, I'm including this handy tutorial in the README section of the unit-test folders in all of my projects going forward so it will always be on-hand when I need it.
+Writing tests for Bash can be challenging, since there is no built-in object support, there are only two type definitions (int and string), and thus no built-in hierachy definitions. That isn't a knock on bash or shell scripts, because at the end of the day, Bash and all shells are Operating Systems and not programming languages. Nevertheless, I'm including this handy tutorial in the README section of the unit-test folders in all of my projects going forward so it will always be on-hand when I need it to automate script tests.
 
 The BATS GithUb repo can be found [here](https://github.com/sstephenson/bats).
 
