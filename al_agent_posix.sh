@@ -233,7 +233,7 @@ run_install () {
     check_enforce
     configure_agent
     make_syslog_config
-    if [ "$(sudo "$init_agent" status 2>&1)" = "al-agent is NOT running" ]; then
+    if [ "$(sudo "$init_agent" status 2>&1)" = "al-agent is NOT running." ]; then
         sudo "$init_agent" start
         if [ -n "$(pgrep al-agent)" ]; then
             echo "INFO: Agent service was started. Install complete."
