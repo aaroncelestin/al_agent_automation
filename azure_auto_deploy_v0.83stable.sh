@@ -1,5 +1,11 @@
 #!/usr/bin/bash
-# Simple script to to del
+# Simple script Bicep to dynamically scale AlertLogic resources with a customer's Azure environment.
+# When integrated into existing automation tools like Bicep, Terraform, Puppet, etc, deployment tiles will be created in Alert Logic for each Azure subscription input. 
+# This allows end users to programmatically scale Alert Logic resources alongside an Azure Cloud Environment. 
+# It should be noted that this script does NOT create or deploy IDS or Scanner appliances, nor does it install Alert Logic agents on VM's; It only deploys Alert Logic resources on Alert Logic infrastructure. 
+# If a customer needs to automate the creation of Cloud infrastructure, they will beed to use the appropriate dev-ops automation tools for that.
+# Author: aaron.celestin@fortra.com
+# Copyright Fortra Inc, 2023
 function usage () 
 {
     local line='==========================================================================================================================================='
