@@ -1,9 +1,9 @@
 #!/usr/bin/bash
-# Simple script Bicep to dynamically scale AlertLogic resources with a customer's Azure environment.
+# Simple Bash script to dynamically scale AlertLogic resources with a customer's Azure environment.
 # When integrated into existing automation tools like Bicep, Terraform, Puppet, etc, deployment tiles will be created in Alert Logic for each Azure subscription input. 
 # This allows end users to programmatically scale Alert Logic resources alongside an Azure Cloud Environment. 
 # It should be noted that this script does NOT create or deploy IDS or Scanner appliances, nor does it install Alert Logic agents on VM's; It only deploys Alert Logic resources on Alert Logic infrastructure. 
-# If a customer needs to automate the creation of Cloud infrastructure, they will beed to use the appropriate dev-ops automation tools for that.
+# If a customer needs to automate the creation of Cloud infrastructure, they will need to use the appropriate dev-ops automation tools for that.
 # Author: aaron.celestin@fortra.com
 # Copyright Fortra Inc, 2023
 function usage () 
@@ -71,8 +71,8 @@ function set_auth_token ()
 ######################################## Helper and Utility Functions ##########################################
 
 function san () { local msg="${@:-$(</dev/stdin)}"; echo -e "$msg" | sed 's/\"//g' | sed 's/[][]//g'; }
-# Sometimes we get strings with spaces and all kinds of chars that have to all be escaped which can be a nightmare if it shows up in vars that you have to compare to each other
-# So, I wrote this function that will more than {SAN}itize a string, it will also squish all whitespace to underscores and remove all spec-chars except underscores and periods
+# Sometimes we get strings with spaces and all kinds of chars that have to all be escaped which can be a nightmare if it shows up in vars that you have to compare to each other.
+# So, this function that will more than {SAN}itize a string, it will also squish all whitespace to underscores and then remove all spec-chars except underscores and periods.
 # We are squishing and cleaning like a mop does, hence the name
 function mop () { local msg="${@:-$(</dev/stdin)}"; echo -e "${msg// /_}" | tr -dc '[:alnum:][=_=][=.=][=-=][=/=]'; }
 
@@ -187,7 +187,7 @@ function get_deployment_info ()
 }
 
 
-# Call topology config on assets_query till at least one row (asset) is doscovered
+# Call topology config on assets_query till at least one row (asset) is discovered
 function call_topology_config ()
 {
     local cid=$(san "$1")
