@@ -1,0 +1,194 @@
+Resources:
+  ALIamRolecimanual20231211:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+        - PolicyName: ALIamPolicycimanual20231211
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EnabledDiscoveryOfVariousAWSServices
+                Resource: '*'
+                Effect: Allow
+                Action:
+                  - access-analyzer:Get*
+                  - access-analyzer:List*
+                  - autoscaling:Describe*
+                  - cloudformation:DescribeStack*
+                  - cloudformation:GetTemplate
+                  - cloudformation:ListStack*
+                  - cloudfront:Get*
+                  - cloudfront:List*
+                  - cloudwatch:Describe*
+                  - config:DeliverConfigSnapshot
+                  - config:Describe*
+                  - config:Get*
+                  - config:ListDiscoveredResources
+                  - cur:DescribeReportDefinitions
+                  - directconnect:Describe*
+                  - dynamodb:ListTables
+                  - ec2:Describe*
+                  - ec2:GetLaunchTemplateData
+                  - ecs:Describe*
+                  - ecs:List*
+                  - elasticbeanstalk:Describe*
+                  - elasticache:Describe*
+                  - elasticloadbalancing:Describe*
+                  - elasticmapreduce:DescribeJobFlows
+                  - events:Describe*
+                  - events:List*
+                  - glacier:ListVaults
+                  - guardduty:Get*
+                  - guardduty:List*
+                  - kinesis:Describe*
+                  - kinesis:List*
+                  - kms:DescribeKey
+                  - kms:GetKeyPolicy
+                  - kms:GetKeyRotationStatus
+                  - kms:ListAliases
+                  - kms:ListGrants
+                  - kms:ListKeys
+                  - kms:ListKeyPolicies
+                  - kms:ListResourceTags
+                  - lambda:List*
+                  - logs:Describe*
+                  - rds:Describe*
+                  - rds:ListTagsForResource
+                  - redshift:Describe*
+                  - route53:GetHostedZone
+                  - route53:ListHostedZones
+                  - route53:ListResourceRecordSets
+                  - sdb:DomainMetadata
+                  - sdb:ListDomains
+                  - securityhub:DescribeHub
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+                  - sns:ListTopics
+                  - sns:GetEndpointAttributes
+                  - sns:GetSubscriptionAttributes
+                  - sns:GetTopicAttributes
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:GetBucket*
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetLifecycleConfiguration
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - tag:GetResources
+                  - tag:GetTagKeys
+                  - workspaces:Describe*
+                  - workspaces:List*
+              - Sid: EnableInsightDiscovery
+                Resource: '*'
+                Effect: Allow
+                Action:
+                  - iam:Get*
+                  - iam:List*
+                  - iam:GenerateCredentialReport
+              - Sid: EnableCloudTrailIfAccountDoesntHaveCloudTrailsEnabled
+                Resource: '*'
+                Effect: Allow
+                Action:
+                  - cloudtrail:DescribeTrails
+                  - cloudtrail:GetEventSelectors
+                  - cloudtrail:GetTrailStatus
+                  - cloudtrail:ListPublicKeys
+                  - cloudtrail:ListTags
+                  - cloudtrail:LookupEvents
+                  - cloudtrail:StartLogging
+                  - cloudtrail:UpdateTrail
+              - Sid: CreateCloudTrailS3BucketIfCloudTrailsAreBeingSetupByAlertLogic
+                Resource: arn:aws:s3:::outcomesbucket-*
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucket
+              - Sid: CreateCloudTrailsTopicTfOneWasntAlreadySetupForCloudTrails
+                Resource: arn:aws:sns:*:*:outcomestopic
+                Effect: Allow
+                Action:
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
+              - Sid: MakeSureThatCloudTrailsSnsTopicIsSetupCorrectlyForCloudTrailPublishingAndSqsSubsription
+                Resource: arn:aws:sns:*:*:*
+                Effect: Allow
+                Action:
+                  - sns:AddPermission
+                  - sns:GetTopicAttributes
+                  - sns:ListTopics
+                  - sns:SetTopicAttributes
+                  - sns:Subscribe
+              - Sid: CreateAlertLogicSqsQueueToSubscribeToCloudTrailsSnsTopicNotifications
+                Resource: arn:aws:sqs:*:*:outcomesbucket*
+                Effect: Allow
+                Action:
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueAttributes
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueUrl
+              - Sid: BeAbleToListSQSForCloudTrail
+                Resource: '*'
+                Effect: Allow
+                Action:
+                  - sqs:ListQueues
+              - Sid: EnableAlertLogicApplianceStateManagement
+                Resource: arn:aws:ec2:*:*:instance/*
+                Effect: Allow
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/AlertLogic: Security
+                Action:
+                  - ec2:GetConsoleOutput
+                  - ec2:GetConsoleScreenShot
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - ec2:TerminateInstances
+              - Sid: EnableAlertLogicAutoScalingGroupManagement
+                Resource: arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/*
+                Effect: Allow
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/AlertLogic: Security
+                Action:
+                  - autoscaling:UpdateAutoScalingGroup
+              - Sid: EnableAlertLogicLaunchTemplateVersionManagement
+                Resource: '*'
+                Effect: Allow
+                Condition:
+                  StringEquals:
+                    ec2:ResourceTag/AlertLogic: Security
+                Action:
+                  - ec2:ModifyLaunchTemplate
+                  - ec2:CreateLaunchTemplateVersion
+                  - ec2:DeleteLaunchTemplateVersions
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Principal:
+              AWS: arn:aws:iam::733251395267:root
+            Effect: Allow
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+            Action: sts:AssumeRole
+Parameters:
+  ExternalId:
+    Type: String
+    MinLength: '2'
+    Description: An external ID identifies Alert Logic as allowed access to the AWS resources defined in this IAM Role.
+Outputs:
+  RoleARN:
+    Value: !GetAtt ALIamRolecimanual20231211.Arn
+    Description: Role ARN
+  ExternalId:
+    Value: !Ref ExternalId
+    Description: An external ID identifies Alert Logic as allowed access to the AWS resources defined in this IAM Role.
+Description: AlertLogic IAM role and policy CloudFormation Template
+AWSTemplateFormatVersion: '2010-09-09'
