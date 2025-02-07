@@ -6,7 +6,7 @@
 # If a customer needs to automate the creation of Cloud infrastructure, they will beed to use the appropriate dev-ops automation tools for that.
 # Author: aaron.celestin@fortra.com
 # Copyright Fortra Inc, 2023
-declare AzureInteractiveAutoDeployScriptVersion='0.17_20250204'
+declare AzureInteractiveAutoDeployScriptVersion='0.18_20250207'
 ############################################# Static Variables #############################################
 declare -x NC=$(tput sgr0)
 declare -x RED=$(tput setaf 1)
@@ -31,11 +31,13 @@ declare -A Key_Regexes=( ['aws_hostkey']=$_AWS_HOST_KEY_REGEX ['azure_hostkey']=
 declare -A Hostkey_Regexes=( ['aws']=$_AWS_HOST_KEY_REGEX ['azure']=$_AZURE_HOST_KEY_REGEX ['dc']=$_DC_HOST_KEY_REGEX )
 declare Cid CloudInsightUrl Head TenantId AppId ALAccessKeyId ALSecretKeyHash AZSecretKeyHash Delimiter InteractiveMode=true Auth_Token UseSubsIds=false UuidType
 declare defender_datacenter CidL=false AidL=false TidL=false AlkL=false UpdateMode=false StartConfirmed=false TestRun=false WaitForDisco=false
+declare UseNativeJsonParser=false
 declare -a Target_List
 declare UkUrl='https://api.cloudinsight.alertlogic.co.uk'
 declare UsUrl='https://api.cloudinsight.alertlogic.com'
 declare AzureCredUrl='https://api.cloudinsight.alertlogic.com/azure_explorer/v1/validate_credentials'
-
+# Some boxes may not have JQ, in those cases we have to use Bash's Native JSON Parser which DOESNT EXIST. The joke is that the native parser is always Grep with some ugly Regex.
+[[ -z $(which jq 2>/dev/null) ]] && UseNativeJsonParser=true
 # Usage and description
 declare -i mw=$(( $(tput cols) * 2/3 )) # menu widths
 # line segment limited by screen width, default is 100 cols
@@ -118,7 +120,13 @@ set_auth_token () {
     # local un='<client id>'
     # local pw='<client key>'
     local authapi="https://api.cloudinsight.alertlogic.com/aims/v1/authenticate"
-    Auth=$(curl -s -X POST -u "${ALAccessKeyId}:$(decrypt_sk "$ALSecretKeyHash")" "$authapi" | jq -r ". | .authentication.token")
+    if $UseNativeJsonParser; then
+        local auth_json=$(curl -s -X POST -u "${ALAccessKeyId}:$(decrypt_sk "$ALSecretKeyHash")" "$authapi")
+        Auth=$(grep -Pio '(?>token":")(.*)["],' <<< "$auth_json" | cut -d: -f2)
+        Auth=$(sed 's/\"//g' <<< "${Auth%,}")
+    else
+        Auth=$(curl -s -X POST -u "${ALAccessKeyId}:$(decrypt_sk "$ALSecretKeyHash")" "$authapi" | jq -r ". | .authentication.token")
+    fi
     # Confirm we got a token
     if [[ -n "$Auth" ]]; then
         Auth_Token=$Auth # set the actual token var we will be using
@@ -285,8 +293,12 @@ call_topology_config () {
     if $TestRun && (( testruns < 4 )); then { testruns=$((testruns+1)) && echo false; } # simulate 2 test runs
     elif $TestRun && (( testruns == 4 )); then { echo true; }
     else
-        local -i result=$(curl -sk GET -H "$Head" "$api" | jq -r '(.topology.rows)?' 2>/dev/null)
-        if (( ${#result} > 10 )); then
+        if $UseNativeJsonParser; then
+            local result=$(curl -sk GET -H "$Head" "$api")
+        else
+            local result=$(curl -sk GET -H "$Head" "$api" | jq -r '(.topology.rows)?' 2>/dev/null)
+        fi
+        if (( ${#result} > 46 )); then
             echo true
         else    
             echo false
@@ -298,18 +310,31 @@ call_topology_config () {
 check_subscription_id () {
     local ref_subs_id="${1:?"${RED}ERROR${NC} module:[${YEL}check_subscription_id${NC}] failed; missing input param"}"
     local -a deployments
-    local dep_name dep_id res=false dep_api="$CloudInsightUrl/deployments/v1/$Cid/deployments" 
-    readarray -t deployments < <(curl -sX GET -H "$Head" "$dep_api" | jq -rc '.[] | [[(.name)],.id]')
-    for deps in "${deployments[@]}"; do
-        dep_name=$(echo "${deps%%],*}" | sed 's/[][]//g' | mop)
-        dep_id=$(echo "${deps##*],}" | san)
-        src_api="$CloudInsightUrl/sources/v1/$Cid/sources/$dep_id" 
-        subs_id=$(curl -sX GET -H "$Head" "$src_api" | jq -rc '(.source.config.azure.subscription_id)')
-        if [[ "${ref_subs_id^^}" == "${subs_id^^}" ]]; then
-	        res=true
-            break
-        fi
-    done
+    local dep_name dep_id res=false dep_api="$CloudInsightUrl/deployments/v1/$Cid/deployments"
+    if $UseNativeJsonParser; then
+        local json=$(curl -sX GET -H "$Head" "$dep_api")
+        readarray -t deployments < <(grep -Pio '(?<="manual")(?:,"id":)("\w{8}-\w{4}-\w{4}-\w{4}-\w{12}")' <<< "$dep_json" | cut -d: -f2)
+        for depid in "${deployments[@]}"; do
+            local src_api="$CloudInsightUrl/sources/v1/$Cid/sources/$depid" 
+            local src_json=$(curl -sX GET -H "$Head" "$src_api")
+            if $(grep -io "${ref_subs_id//\"/}" <<< "$src_json"); then
+                res=true
+                break
+            fi
+        done
+    else 
+        readarray -t deployments < <(curl -sX GET -H "$Head" "$dep_api" | jq -rc '.[] | [[(.name)],.id]')
+        for deps in "${deployments[@]}"; do
+            dep_name=$(echo "${deps%%],*}" | sed 's/[][]//g' | mop)
+            dep_id=$(echo "${deps##*],}" | san)
+            local src_api="$CloudInsightUrl/sources/v1/$Cid/sources/$dep_id" 
+            subs_id=$(curl -sX GET -H "$Head" "$src_api" | jq -rc '(.source.config.azure.subscription_id)')
+            if [[ "${ref_subs_id^^}" == "${subs_id^^}" ]]; then
+                res=true
+                break
+            fi
+        done
+    fi
     echo $res
 }
 confirm_start () {
@@ -380,9 +405,12 @@ create_azure_deployment () {
             exit 1
         else
             echo -e "${GRE}SUCCESS${NC} Azure credential was loaded successfully."
-            ############# get newly created credential id #################
-            
-            local cred_id="$(jq -rc '(.id)?' <<< "$response")"
+            ############# get newly created credential id ###########################################################
+            if $UseNativeJsonParser; then
+                local cred_id=$(grep -Pio '"id":("\w{8}-\w{4}-\w{4}-\w{4}-\w{12}")' <<< "$response" | cut -d: -f2 | tr -dc '[:alnum:][=-=]')
+            else
+                local cred_id="$(jq -rc '(.id)?' <<< "$response")"
+            fi
             if $TestRun; then { echo -e "${MAG}TESTRUN MODE${NC} FUNC:[create_azure_deployment] MODULE:[get_cred_id] OUTPUT:[${YEL}${cred_id}${NC}]"; } fi
             local deployment_id
             #################### create deployment ########################
@@ -391,6 +419,9 @@ create_azure_deployment () {
                 put_deployment "$dep_name" "$subs_id" "$cred_id" 
                 echo -e "${MAG}TESTRUN MODE${NC} FUNC:[create_azure_deployment] MODULE:[put_deployment] OUTPUT:[${YEL}$(jq -rc '.' <<< "$fake_json")${NC}]"
                 ! deployment_id=$(jq -rc '.id' <<< "$fake_json")
+            elif $UseNativeJsonParser; then
+                local dep_json=$(put_deployment "$dep_name" "$subs_id" "$cred_id")
+                ! deployment_id=$(grep -Pio '(?<="manual")(?:,"id":)("\w{8}-\w{4}-\w{4}-\w{4}-\w{12}")' <<< "$dep_json" | cut -d: -f2 | tr -dc '[:alnum:][=-=]')
             else
     	        ! deployment_id=$(put_deployment "$dep_name" "$subs_id" "$cred_id" | jq -rc '.id')
             fi
@@ -496,7 +527,7 @@ get_secret_from_user () {
 }
 get_uuid_from_user () {
     local input input_type="${1:?"${RED}ERROR${NC} module:[${YEL}get_uuid_from_user${NC}] failed; missing input param:[${YEL}input_type${NC}]"}"
-    local output_var=${1:?"${RED}ERROR${NC} module:[${YEL}get_uuid_from_user${NC}] failed; missing input param:[${YEL}output_var${NC}]"}
+    local output_var=${2:?"${RED}ERROR${NC} module:[${YEL}get_uuid_from_user${NC}] failed; missing input param:[${YEL}output_var${NC}]"}
     read -rp "Please enter the ${input_type^} ${RED}-->>${NC}: " input
     if [[ -n "$input" ]] && $(validate_uuid "$input"); then # clean and check the input
         input=$(tr -dc '[:alnum:][=-=]' <<< "$input")
@@ -677,9 +708,5 @@ if [[ -n $Cid ]] && [[ -n "$TenantId" ]] && [[ -n "$AppId" ]]; then
         echo -e "${MAG}FATAL${NC} Target list was empty or not accessible:\n\tTarget_List array size:[${YEL}${#Target_List[@]}${NC}]"
     fi
 else    
-    echo -e "${MAG}FATAL${NC} Necessary input was empty or not accessible:\n\tCid:[${YEL}${Cid}${NC}]\n\tenantId:[${YEL}${TenantId}${NC}]\n\tAppId:[${YEL}${AppId}${NC}]."
+    echo -e "${MAG}FATAL${NC} Necessary input was empty or not accessible:\n\tCid:[${YEL}${Cid}${NC}]\n\tTenantId:[${YEL}${TenantId}${NC}]\n\tAppId:[${YEL}${AppId}${NC}]."
 fi
-
-    
-
-
