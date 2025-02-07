@@ -6,7 +6,7 @@
 # If a customer needs to automate the creation of Cloud infrastructure, they will beed to use the appropriate dev-ops automation tools for that.
 # Author: aaron.celestin@fortra.com
 # Copyright Fortra Inc, 2023
-declare AzureInteractiveAutoDeployScriptVersion='0.57_20250204'
+declare AzureInteractiveAutoDeployScriptVersion='0.17_20250204'
 ############################################# Static Variables #############################################
 declare -x NC=$(tput sgr0)
 declare -x RED=$(tput setaf 1)
