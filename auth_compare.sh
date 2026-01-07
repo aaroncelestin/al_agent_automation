@@ -266,6 +266,23 @@ process_main () {
         echo -e "${RED}ERROR${NC} Something went wrong. Some auth_token:[${CYA}${#auth_token}${NC}] was found but could not be validated."
     fi
 }
+
+# We can use this helper function to simulate the nameref feature introduced in Bash 4.3 for indirection, which allows us to explicitly create a pointer var. 
+# The end result is that we can have two arrays as input parameters into another function and the end user is none the wiser! NOTE this function uses eval
+# and some user input is passed to it which necessitates the cleaning using tr. No spaces, special chars (except underscores) or tokens are allowed in variable names, anyway. 
+# USAGE: 
+# Easiest most basic way is to call this function with just the name of the array variable without tokens or quotes: 
+#   nameref mylist
+# For variable array names, use the $var syntax, but leave ii unquoted:
+#   nameref $var_array      
+# That will spit out the contents of the array and you can catch the array for further manipulation like this:
+#   declare -a output_array=( $(nameref $var_array) ) -- note the lack of double quotes
+# For new-line separated arrays, you can catch the output array with 'readarray' like this:
+#   readarray -t output_array < <(nameref $var_array)
+# nameref version 0.19a_20250218
+function nameref () { local aref=$(tr -dc '[:alnum:][=_=]' <<< "$1");  eval 'declare -a _output=( "${'"$aref"'[@]}" )'; for elem in "${_output[@]}"; do { echo "$elem"; } done; }
+
+
 # Start Script
 auth_script_title
 declare -i postat opterr
