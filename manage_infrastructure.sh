@@ -745,7 +745,7 @@ function convert_large_cidr_to_subnets () {
     #local -i sub_size=$(( 2 ** new_prefix_diff ))
     local -i sub_size=$(( 1 << (32 - segsize) ))
     IFS=: read -r net_dec bcast_dec <<< "$(awk_get_cidr_boundaries_dec "$cidr")"
-    for (( ip=$net_dec; ip<$(( $(ip2int $(int2ip $net_dec) | awk '{print $1}') + $sub_size * (1 << $new_prefix_diff) )); ip+=$sub_size )); do 
+    for (( ip=$net_dec; ip<$(( $net_dec + $sub_size * (1 << $new_prefix_diff) )); ip+=$sub_size )); do 
         echo "$(int2ip $ip)/$segsize"
     done
     debug_off
